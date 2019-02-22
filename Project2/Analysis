@@ -1,0 +1,40 @@
+I will be analyzing a .CSV file which contains a dataset of over 20,000 chess games from the Lichess Api (Ornicar). 
+I accessed the data through Kaggle (J, M.). The dataset contains information about the Game ID, Number of turns, Game Status, Player rankings, gameplay notations, opening ECO, opening name, and more. 
+Although there is a huge amount of interesting information that could be harvested from this dataset, I will only be looking to find the most common openings depending on player ratings. 
+More specifically, my hypotheses will be:
+
+H0: Highly ranked players (Candidate Master or higher) most frequently played a Kings Pawn Opening.
+H1: Highly ranked players (Candidate Master or higher) did not most frequently play a Kings Pawn Opening.
+Here is a summary of the data. The data that I selected (df2) shows white and black ratings of 2000 ELO and higher. 
+The Opening ECO is an opening symbol. For example, D02 (the most commonly played opening) refers to some form of the Queens Pawn Game. 
+Note that the second and third ranked Queen Pawn Games (in the ‘opening_name’ column below) do not add to 29 (as they do in the ‘opening_eco’ column) because the D02 ECO is a more general 
+identifier of Queen’s Pawn Games that refers to additional variations ((n.d.) ECO Codes).
+
+ white_rating   black_rating   opening_eco   opening_name
+ Min.   :2000   Min.   :2000   D02    : 29   Indian Game                                  : 12  
+ 1st Qu.:2070   1st Qu.:2064   B01    : 28   Queen's Pawn Game: London System             : 11  
+ Median :2156   Median :2145   B20    : 22   Queen's Pawn Game: Mason Attack              : 10  
+ Mean   :2166   Mean   :2160   A45    : 19   Scandinavian Defense: Mieses-Kotroc Variation:  9  
+ 3rd Qu.:2235   3rd Qu.:2234   B06    : 18   Caro-Kann Defense: Exchange Variation        :  8  
+ Max.   :2622   Max.   :2588   C00    : 18   Horwitz Defense                              :  
+                               (Other):723   (Other)                                      :799                                 
+
+Both graphs above show the frequency of the most popular openings for players exceeding 1999 ELO. 
+Figure 1 shows the most frequently played opening games, importantly this includes each specific variation following the game type. 
+It shows that the Indian Game was the most popular variation, followed by Queen’s Pawn Game variations and the Scandinavian Defense: Mieses-Kotroc Variation. 
+Figure 2 on the right shows the most popular openings by its general ECO code. This figure shows that Queen Pawn variations were actually the most popular, followed by Scandinavian Defense variations and Sicilian Defense variations (n.d. ECO).
+I learned that my null hypothesis was incorrect. I thought that e4 would be the most common opening move (leading to an Open Game, Sicilian defense, French defense, etc.), 
+but it turns out that d4 was more commonly played by 2000+ ELO players in this dataset (Chess). The Queen’s Pawn Game, which is any game where white first plays d4 
+(and leads to the London system, Trompowsky attack, Torre attack, etc.), was the most popular in this dataset (Queen’s). 
+The most popular of these was the London System, in which white replies with 2. Bf4. This is a very common opening for any level and it is a highly flexible opening that can lead to a diverse array of openings (Queen’s). 
+According to a blog post in 2012, most top tier grandmasters play d4 (besides Fisher and possibly Keres) (Any). I would be very interested to see the most common openings of super-tier GM computers like AlphaGo Zero and Stockfish. 
+
+
+
+References:
+Any GM's or strong players who played D4 more often then E4? - Chess Forums. (n.d.). Retrieved from https://www.chess.com/forum/view/chess-openings/any-gms-or-strong-players-who-played-d4-more-often-then-e4
+Chess Opening Theory/1. e4. (n.d.). Retrieved from https://en.wikibooks.org/wiki/Chess_Opening_Theory/1._e4
+J, M. (2017, September 04). Chess Game Dataset (Lichess). Retrieved from https://www.kaggle.com/datasnaek/chess
+(n.d.). ECO Codes. Retrieved February 12, 2019, from www.365chess.com/eco.se
+Ornicar. (2019, February 12). Lichess. Retrieved from https://github.com/ornicar/lila
+Queen's Pawn Game. (2018, April 12). Retrieved from https://en.wikipedia.org/wiki/Queen's_Pawn_Game
