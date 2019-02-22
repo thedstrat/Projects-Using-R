@@ -1,0 +1,31 @@
+library(dplyr)
+library(sos)
+library(ggplot2)
+
+#Read CSV and select columns
+df = read.csv(file="c:/Users/delis/Documents/CSU/MIS500/games.csv", header=TRUE, sep=",")
+df = select(df, white_rating, black_rating, opening_eco, opening_name)
+
+#return only a subset of games where both white and black were 2000+ ELO
+df = subset(df, white_rating >= 2000)
+df = subset(df, black_rating >= 2000)
+
+#Find frequency of all openings in df
+df2 = as.data.frame(table(df$opening_eco))
+df2 = df2[order(df2$Freq),] #sort opening name games by frequency
+
+#Make df2 only contain openings played 6 or more times and rename first column
+df2 = subset(df2, Freq >= 15)
+colnames(df2)[1] <- "Opening"
+
+head(df2)
+
+#Make a graph
+theme_set(theme_bw())
+df2$Opening = factor(df2$Opening, levels = df2$Opening) #retain order
+
+ggplot(df2, aes(x=Opening, y=Freq)) + 
+  geom_bar(stat="identity", width=.5, fill="tomato3") + 
+  labs(title="CM Chess Opening Frequency", 
+       caption="source: https://github.com/ornicar/lila") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.4))
