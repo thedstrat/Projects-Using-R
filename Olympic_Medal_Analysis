@@ -1,0 +1,187 @@
+#==============================================================================
+#   1. Settings, packages, and options (run these every R session)
+#==============================================================================
+
+# Clear the working space
+rm(list = ls())
+
+# Set working directory
+# Copy the complete "path" to your ECON 42 folder
+# Example: mine is "(C:/Users/delis/OneDrive/Documents/Econ42/files42/data")
+
+setwd("C:/Users/delis/OneDrive/Documents/Econ42/files42/data")
+
+# Load the packages (these must have been installed once: see Chapter 2 of the Guide)
+library(AER)
+library(sandwich)
+library(lmtest)
+library(car)
+library(stargazer)
+library(ggplot2)
+library(openintro)
+library(OIdata)
+library(WDI)
+library(gdata)
+library(doBy)
+library(XML)
+library(countrycode)
+library(erer)
+library(dplyr)
+library(sqldf)
+library(RPostgreSQL)
+
+
+# turn off scientific notation except for big numbers
+options(scipen = 9)
+# set larger font size for qplot (default is 12)
+theme_set(theme_gray(base_size = 18))
+# function to calculate corrected SEs for regression
+cse = function(reg) {
+  rob = sqrt(diag(vcovHC(reg, type = "HC1")))
+  return(rob)
+}
+
+
+#==============================================================================
+#   2. Data section
+#==============================================================================
+
+
+# This is the data set for
+
+medalinfo = read.csv("Summer Olympic medallists 1896 to 2008 - ALL MEDALISTS2.csv", header=TRUE, sep=",")
+
+# Make this data limited to years (edition variable) from 1996-2012
+
+medalinfo = subset(medalinfo, Edition>1995)
+
+
+#Make binary variable if its gold or not, if its silver or not, if its bronze or not
+
+medalinfo$g = as.numeric(medalinfo$Medal== "Gold")
+
+medalinfo$s = as.numeric(medalinfo$Medal== "Silver")
+
+medalinfo$b = as.numeric(medalinfo$Medal== "Bronze")
+
+#Collapse data
+c_oly <- summaryBy(g+s+b ~ NOC, FUN=c(sum), data=medalinfo)
+
+
+#merge World Bank data (for the year 1995) with the Summer Olympics data.
+# This is the data set for WDI data
+
+### Read the data
+# Create a list of variables to import create a list
+wdilist <- c("NY.GDP.PCAP.PP.KD", # GDP per capita, PPP (constant 2005 intl $)
+         	"SP.POP.GROW", # Population growth (annual %)
+         	"SP.POP.TOTL", # Population, total
+         	"SP.POP.TOTL.FE.ZS", # Population, female (% of total)
+         	"SP.URB.TOTL.IN.ZS", # Urban population (% of total)
+         	"SP.POP.BRTH.MF", # Sex ratio at birth (females per 1,000 males)
+         	"SP.DYN.LE00.IN", # Life expectancy at birth, total (years)
+         	"SP.DYN.LE00.FE.IN", # Life expectancy at birth, female (years)
+         	"SP.DYN.LE00.MA.IN", # Life expectancy at birth, male (years),
+         	"SP.DYN.IMRT.IN", # Infant mortality rate
+         	"SP.DYN.TFRT.IN" )# Fertility rate, total (births per woman)
+
+# Extract latest version of desired variables from WDI.
+# This takes a long time, so below save as csv file and the import rather than download from WDI each time
+wdim <- WDI(country="all", indicator = wdilist, extra = TRUE, start = 1995, end = 1995)
+
+
+# Rename the variables
+wdim <- rename.vars(wdim, c("NY.GDP.PCAP.PP.KD","SP.POP.TOTL"), c("GDPpcUSDreal","population"))
+wdim <- rename.vars(wdim, c("SP.POP.TOTL.FE.ZS","SP.URB.TOTL.IN.ZS"), c("femaleperc","urbanperc"))
+wdim <- rename.vars(wdim, c("SP.POP.BRTH.MF","SP.DYN.LE00.IN"), c("sexratiobirth","lifeexp"))
+wdim <- rename.vars(wdim, c("SP.POP.GROW"), c("popgrow"))
+wdim <- rename.vars(wdim, c("SP.DYN.LE00.FE.IN","SP.DYN.LE00.MA.IN"), c("lifexpfem","lifeexpmale"))
+wdim <- rename.vars(wdim, c("SP.DYN.IMRT.IN","SP.DYN.TFRT.IN"), c("infmort","fertility"))
+
+#Drop the aggregates
+wdim = subset(wdim, !( region=="Aggregates") )
+table(wdim$region)
+
+#subset wdim to only a few specific variables
+
+wdim1 = subset(wdim, select =
+            	c(country, year, population,
+              	femaleperc, GDPpcUSDreal,iso2c,iso3c ) )
+
+#rename wdim$year to wdim$Edition
+
+names(wdim1)[names(wdim1) == 'year'] <- 'Edition'
+
+#rename wdim$iso3c to wdim$NOC
+
+names(wdim1)[names(wdim1) == 'iso3c'] <- 'NOC'
+
+
+#Put all wdim and medalinfo into the same file
+
+common = merge(c_oly, wdim1, by="NOC")
+
+#read in rossshort.csv
+
+ross = read.csv("rossshort.csv", header=TRUE, sep=",")
+
+#create subset
+ross1 = subset(ross, select =
+             	c(zcommie, zfemale_seats, zislam,
+               	zoil_gas_rentPOP,id ) )
+
+#rename variables
+
+names(ross1)[names(ross1) == 'id'] <- 'NOC'
+
+#merge files
+
+common2 = merge(ross1, common, by= "NOC")
+
+#Make a variable for total medals
+common2$tm = (common2$g.sum+common2$s.sum+common2$b.sum)
+
+
+#Next Section -----------------------------------------------------------------------------------
+
+
+#Make regressions for Total medals won, gold medals, silver medals, and bronze medals
+#by female perc, gdp, zcommie, zislam, and zoil_gas_rentPOP
+
+reg10 = lm(common2$g.sum~femaleperc+GDPpcUSDreal+zcommie+zislam+zoil_gas_rentPOP, data=common2)
+reg11 = lm(common2$s.sum~femaleperc+GDPpcUSDreal+zcommie+zislam+zoil_gas_rentPOP, data=common2)
+reg12 = lm(common2$b.sum~femaleperc+GDPpcUSDreal+zcommie+zislam+zoil_gas_rentPOP, data=common2)
+reg13 = lm(common2$tm~femaleperc+GDPpcUSDreal+zcommie+zislam+zoil_gas_rentPOP, data=common2)
+
+
+#stargazer for regressions
+stargazer(reg10, reg11, reg12, reg13,
+      	se=list(cse(reg10),cse(reg11), cse(reg12),cse(reg13)),
+      	title="Country's Correlations With Olympic Medal Wins from 1995 to 2005",
+             	type="text", df=FALSE, digits=3)
+
+
+
+
+#Table for total medals by country (only the top 20, ranked from most medals to least)
+
+medalcountry = summaryBy(g.sum+s.sum+b.sum+tm ~ NOC, FUN=c(sum), data=common2)
+mc2 = subset(medalcountry,medalcountry$tm>=70)
+mc2[order(-mc2$tm, mc2$NOC),]
+
+#Plot of GDP by total medal count for graph 1
+
+qplot(GDPpcUSDreal, tm, data=common2, geom=c("point","smooth"),
+  	main = "GDP vs Total Olympic Medal Count by Country",
+  	ylab = "Total Number of Medals Won from 1995 to 2005",xlab = "GDP in 1995 (adjusted in real terms to USD")
+
+
+#Plot population by total medal count and remove outliers for graph 2
+
+chart0 = qplot(population, tm, data=common2,
+  	main = "Population vs Total Olympic Medal Count by Country",
+  	ylab = "Total Number of Medals Won from 1995 to 2005",xlab = "Population by Country")
+# scale y limits
+chart1 = chart0 + coord_cartesian(xlim = c(0,300000000))
+# display the resulting chart, which is called chart1
+chart1
